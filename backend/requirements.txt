@@ -1,0 +1,8 @@
+falcon
+gunicorn
+marshmallow
+sqlalchemy
+psycopg2-binary
+redis
+alembic
+marshmallow_enum
