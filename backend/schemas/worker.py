@@ -19,3 +19,8 @@ class WorkerPublicSchema(Schema):
 
     class Meta:
         type_ = "worker"
+
+class WorkerLoginSchema(Schema):
+
+    login = fields.String()
+    password = fields.String()

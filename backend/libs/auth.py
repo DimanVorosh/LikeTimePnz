@@ -1,8 +1,9 @@
 import falcon
 import hashlib
 
-import config
-from models.user import User
+from config import SECURE
+from models.worker import Worker
+from libs.middleware import Session
 from libs.redis import Redis
 
 
@@ -12,55 +13,42 @@ def get_user(user_session):
     if not user_id:
         raise falcon.HTTPUnauthorized()
 
-    return (
-        User
-        .select()
-        .where(User.id == user_id)
-        .get()
-    )
+    return Session.query(Worker)\
+        .filter(
+            Worker.id == user_id
+        ).first()
+
+# def auth_required(req, resp, resource, params):
+
+#     if 'user_session' not in req.cookies:
+#         raise falcon.HTTPUnauthorized()
+
+#     user = get_user(req.cookies['user_session'])
+
+#     if not user:
+#         raise falcon.HTTPUnauthorized()
+
+#     resource.user = user
 
 
-def with_auth(req, resp, resource, params):
-    if 'user_session' in req.cookies:
-        try:
-            user = get_user(req.cookies['user_session'])
-            resource.user = user
-        except Exception:
-            resource.user = None
-    else:
-        resource.user = None
+# def admin_required(req, resp, resource, params):
+#     if 'user_session' not in req.cookies:
+#         raise falcon.HTTPUnauthorized()
 
+#     user = get_user(req.cookies['user_session'])
 
-def auth_required(req, resp, resource, params):
+#     if not user:
+#         raise falcon.HTTPUnauthorized()
 
-    if 'user_session' not in req.cookies:
-        raise falcon.HTTPUnauthorized()
+#     if not user.is_admin:
+#         raise falcon.HTTPForbidden()
 
-    user = get_user(req.cookies['user_session'])
-
-    if not user:
-        raise falcon.HTTPUnauthorized()
-
-    resource.user = user
-
-
-def admin_required(req, resp, resource, params):
-    if 'user_session' not in req.cookies:
-        raise falcon.HTTPUnauthorized()
-
-    user = get_user(req.cookies['user_session'])
-
-    if not user:
-        raise falcon.HTTPUnauthorized()
-
-    if not user.is_admin:
-        raise falcon.HTTPForbidden()
-
-    resource.user = user
+#     resource.user = user
 
 
 def make_session(credential, user_data, user_id):
-    user_credential = credential+config.SECURE['secure']['salt_session']+user_data
+
+    user_credential = credential+SECURE['salt_session']+user_data
 
     session = hashlib.sha256(user_credential.encode()).hexdigest()
 

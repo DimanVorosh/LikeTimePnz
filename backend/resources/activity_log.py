@@ -3,7 +3,7 @@ import datetime as dt
 import falcon
 
 from sqlalchemy import and_, func, asc, extract
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, contains_eager
 
 from models.activity_log import ActivityLog
 from models.worker import Worker
@@ -17,43 +17,33 @@ class ActivityLogController(object):
 
         date = req.params['date']
 
-        collector_log = aliased(ActivityLog)
+        payload_sum = aliased(ActivityLog)
 
-        logs = Session.query(ActivityLog, collector_log)\
+        logs = Session.query(
+                func.sum(payload_sum.payload).label('product_kilogramms'),
+                ActivityLog.worker_id.label('worker_id'),
+                extract('hour', ActivityLog.local_time).label('work_hour'),
+                Worker
+            )\
+            .join(Worker, Worker.id == ActivityLog.worker_id)\
+            .join(payload_sum, ActivityLog.box_code == payload_sum.box_code)\
             .filter(
                 and_(
+                    ActivityLog.type == 'COLLECT',
+                    payload_sum.type == 'REVIEW',
                     func.date(ActivityLog.local_time) >= date,
-                    func.date(ActivityLog.local_time) <= date, 
-                    ActivityLog.type == 'REVIEW',
-                    ActivityLog.status == 'SUCCESS'
+                    func.date(payload_sum.local_time) <= date
                 )
             )\
-            .order_by(ActivityLog.local_time.asc())\
-            .join(
-                collector_log, collector_log.box_code == ActivityLog.box_code
-            )\
-            .filter(
-                and_(
-                    collector_log.type == 'COLLECT',
-                    collector_log.status == 'SUCCESS',
-                    func.date(collector_log.local_time) == func.date(ActivityLog.local_time),
-                    extract('hour', collector_log.local_time) == extract('hour', ActivityLog.local_time)
-                )
-            )
-
+            .group_by(ActivityLog.worker_id, extract('hour', ActivityLog.local_time), Worker)\
+            .order_by(extract('hour', ActivityLog.local_time).asc())\
+        
         working_hours = []
-        activity_logs = []
 
         for log in logs:
-            working_hours.extend([
-                log[0].local_time.hour, 
-                log[1].local_time.hour
-            ])
-            activity_logs.append({
-                'inspector': log[0],
-                'collector': log[1]
-            })
-
+            print(log[3].__dir__())
+            working_hours.append(log[2])
+    
         if working_hours.__len__() == 0:
             raise falcon.HTTPNotFound()
 
@@ -61,7 +51,7 @@ class ActivityLogController(object):
 
         result = { 
             'working_hours': working_hours,
-            'logs': activity_logs
+            'logs': logs
         }
 
         resp.body = ActivityLogsPublicSchema().dumps(result)

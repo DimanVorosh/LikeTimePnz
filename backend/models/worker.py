@@ -20,6 +20,7 @@ class Worker(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
 
     ean13 = Column(BigInteger, unique=True, nullable=False)
+    login = Column(String, unique=True)
     password = Column(String, nullable=False)
 
     name = Column(String)
