@@ -20,6 +20,10 @@ def create_worker(ean13, login, name, surname, middle_name, type):
   worker.deleted = False
   worker.save()
   worker.db_session.commit()
+
+  if worker.type == WorkerType.INSPECTOR:
+    print(worker.login, worker.password)
+
   return worker
 
 first_collector = create_worker(

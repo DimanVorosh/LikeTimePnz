@@ -9,8 +9,8 @@
           prev-icon="mdi-skip-previous"
           next-icon="mdi-skip-next"
           locale="ru"
-          min="2019-01-01"
-          max="2019-12-24"
+          min="2019-05-01"
+          max="2019-12-31"
           full-width
         ></v-date-picker>
         <v-row justify="center">
