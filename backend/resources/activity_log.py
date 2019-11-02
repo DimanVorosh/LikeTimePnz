@@ -40,7 +40,7 @@ class ActivityLogController(object):
             .group_by(ActivityLog.worker_id, extract('hour', ActivityLog.local_time), Worker)\
             .order_by(extract('hour', ActivityLog.local_time).asc())\
         
-        if not logs:
-            raise falcon.HTTP_NOT_FOUND
+        if not logs.first():
+            raise falcon.HTTPNotFound()
 
         resp.body = ActivityLogPublicSchema(many=True).dumps(logs)
