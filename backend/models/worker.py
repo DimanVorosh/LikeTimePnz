@@ -3,10 +3,8 @@ from sqlalchemy.schema import Column
 from sqlalchemy.sql.sqltypes import BigInteger, String, Enum as EnumField, Boolean
 
 from models.meta import Base
-# from models.user import PasswordManager
 
 from enum import Enum
-# from libs.errors import HTTPNotFound
 from libs.barcodes import calculate_checksum
 
 

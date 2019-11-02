@@ -4,10 +4,10 @@ from sqlalchemy import and_, func, asc, extract
 from sqlalchemy.orm import aliased, contains_eager
 
 from libs.decorators import with_body_params
-from libs.middleware import Session
-from libs.auth import make_session
+from libs.sqlalchemy import Session
+from libs.auth import make_session, auth_required, remove_session
 from models.worker import *
-from schemas.worker import WorkerLoginSchema
+from schemas.worker import WorkerLoginSchema, WorkerPublicSchema
 
 
 class WorkerLoginController(object):
@@ -23,14 +23,15 @@ class WorkerLoginController(object):
         .filter(
             Worker.login == login
         ).first()
+
     except Exception:
       raise falcon.HTTPNotFound()
 
     if not worker.is_password_valid(password):
-      raise falcon.HTTPUnauthorized()
+      raise falcon.HTTPForbidden()
 
     if worker.type != WorkerType.INSPECTOR:
-      raise falcon.HTTPBadRequest()
+      raise falcon.HTTPForbidden()
 
     try:
       resp.set_cookie(
@@ -44,3 +45,18 @@ class WorkerLoginController(object):
       )
     except Exception:
       raise falcon.HTTPUnauthorized()
+
+
+class CurrentWorkerController(object):
+
+    @falcon.before(auth_required)
+    def on_get(self, req, resp):
+      resp.body = WorkerPublicSchema().dumps(self.user)
+
+
+class LogoutController(object):
+  
+    @falcon.before(auth_required)
+    def on_get(self, req, resp):
+
+        remove_session(req.cookies['user_session'])

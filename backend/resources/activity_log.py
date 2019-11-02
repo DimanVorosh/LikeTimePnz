@@ -7,12 +7,14 @@ from sqlalchemy.orm import aliased, contains_eager
 
 from models.activity_log import ActivityLog
 from models.worker import Worker
-from libs.middleware import Session
-from schemas.activity_log import ActivityLogsPublicSchema
+from libs.sqlalchemy import Session
+from libs.auth import auth_required
+from schemas.activity_log import ActivityLogPublicSchema
 
 
 class ActivityLogController(object):
 
+    @falcon.before(auth_required)
     def on_get(self, req, resp):
 
         date = req.params['date']
@@ -38,20 +40,7 @@ class ActivityLogController(object):
             .group_by(ActivityLog.worker_id, extract('hour', ActivityLog.local_time), Worker)\
             .order_by(extract('hour', ActivityLog.local_time).asc())\
         
-        working_hours = []
+        if not logs:
+            raise falcon.HTTP_NOT_FOUND
 
-        for log in logs:
-            print(log[3].__dir__())
-            working_hours.append(log[2])
-    
-        if working_hours.__len__() == 0:
-            raise falcon.HTTPNotFound()
-
-        working_hours = list(set(working_hours))
-
-        result = { 
-            'working_hours': working_hours,
-            'logs': logs
-        }
-
-        resp.body = ActivityLogsPublicSchema().dumps(result)
+        resp.body = ActivityLogPublicSchema(many=True).dumps(logs)

@@ -3,11 +3,12 @@ import hashlib
 
 from config import SECURE
 from models.worker import Worker
-from libs.middleware import Session
+from libs.sqlalchemy import Session
 from libs.redis import Redis
 
 
 def get_user(user_session):
+
     user_id = Redis.get(user_session)
 
     if not user_id:
@@ -15,35 +16,21 @@ def get_user(user_session):
 
     return Session.query(Worker)\
         .filter(
-            Worker.id == user_id
+            Worker.id == int(user_id)
         ).first()
 
-# def auth_required(req, resp, resource, params):
 
-#     if 'user_session' not in req.cookies:
-#         raise falcon.HTTPUnauthorized()
+def auth_required(req, resp, resource, params):
 
-#     user = get_user(req.cookies['user_session'])
+    if 'user_session' not in req.cookies:
+        raise falcon.HTTPUnauthorized()
 
-#     if not user:
-#         raise falcon.HTTPUnauthorized()
+    user = get_user(req.cookies['user_session'])
 
-#     resource.user = user
+    if not user:
+        raise falcon.HTTPUnauthorized()
 
-
-# def admin_required(req, resp, resource, params):
-#     if 'user_session' not in req.cookies:
-#         raise falcon.HTTPUnauthorized()
-
-#     user = get_user(req.cookies['user_session'])
-
-#     if not user:
-#         raise falcon.HTTPUnauthorized()
-
-#     if not user.is_admin:
-#         raise falcon.HTTPForbidden()
-
-#     resource.user = user
+    resource.user = user
 
 
 def make_session(credential, user_data, user_id):

@@ -3,9 +3,13 @@ from typing import Type
 from math import ceil
 
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import Query, scoped_session
+from sqlalchemy.orm import Query, scoped_session, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import inspect
+from sqlalchemy import create_engine
+
+import config
+
 
 DEFAULT_PAGE_SIZE = 40
 
@@ -213,3 +217,29 @@ def with_pagination_meta(models: list, pagination: Pagination):
             'page_size': pagination.page_size
         }
     }
+
+engine = create_engine(
+    'postgresql+{engine}://{username}:{password}@{host}:{port}/{db_name}'.format(
+        **config.POSTGRESQL
+    ),
+    pool_size=config.POSTGRESQL['pool_size'],
+    echo=config.SQLALCHEMY['debug']
+)
+
+session_factory = sessionmaker(bind=engine, query_cls=CustomQuery)
+Session = scoped_session(session_factory)
+
+class SQLAlchemySessionManager:
+
+    def __init__(self, Sssion):
+        self.db_session = Session
+
+    def process_resource(self, req, resp, resource, params):
+        req.context['db_session'] = self.db_session()
+
+    def process_response(self, req, resp, resource, req_succeeded):
+
+        if req.context.get('db_session'):
+            if not req_succeeded:
+                req.context['db_session'].rollback()
+            req.context['db_session'].close()
