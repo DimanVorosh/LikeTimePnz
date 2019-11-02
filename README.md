@@ -61,7 +61,7 @@ alembic upgrade head # запуск миграций
 
 ```bash
 cd frontend
-npm install install
+npm install
 npm run serve
 ```
 
